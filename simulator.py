@@ -1,4 +1,5 @@
 import asyncio
+
 from pymodbus.datastore import (
     ModbusSequentialDataBlock,
     ModbusDeviceContext,
@@ -56,6 +57,7 @@ def build_context():
 # -----------------------------------------------------
 async def start_single_server(ip):
     context = build_context()
+    asyncio.create_task(register_updater(context))
 
     identity = ModbusDeviceIdentification(
         info_name={
@@ -74,6 +76,35 @@ async def start_single_server(ip):
         identity=identity,
         address=(ip, 502),
     )
+
+# -----------------------------------------------------
+# Updater register value
+# -----------------------------------------------------
+async def register_updater(context):
+    func_code = 3          # holding registers
+    address = 0            # HR[0]
+    count = 1              # just one register
+
+    while True:
+        await asyncio.sleep(1)
+        unit_id = 1
+        
+        try:
+            # read current value
+            values = context[unit_id].getValues(func_code, address, count=count)
+            current = values[0]
+
+            # increment
+            new_value = (current + 1) % 10000
+
+            # write new value
+            context[unit_id].setValues(func_code, address, [new_value])
+
+            print(f"[Unit {unit_id}] HR[0] = {new_value}")
+            #print(f"[Server {server_index}] [Address: {ip}] [Unit ID: {unit_id}] [HR[0]: {new_value}]")
+
+        except Exception as e:
+            print(f"[Unit {unit_id}] ERROR: {e}")
 
 
 # -----------------------------------------------------
