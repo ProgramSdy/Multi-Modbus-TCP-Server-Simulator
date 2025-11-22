@@ -1,29 +1,98 @@
-from pymodbus.server import ModbusTcpServer
-from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSlaveContext, ModbusServerContext
-from threading import Thread
+import asyncio
+from pymodbus.datastore import (
+    ModbusSequentialDataBlock,
+    ModbusDeviceContext,
+    ModbusServerContext,
+)
+from pymodbus.server import StartAsyncTcpServer
+from pymodbus import ModbusDeviceIdentification
+import logging
 
-def start_server(ip):
-    store = ModbusSlaveContext(
-        hr=ModbusSequentialDataBlock(0, [0] * 100)
+# Disable spammy pymodbus logging (optional)
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("multi-modbus")
+
+
+# -----------------------------------------------------
+# Build a device context (4 blocks, each size=100)
+# -----------------------------------------------------
+def build_device():
+    """Create a ModbusDeviceContext with 4 blocks (co, di, hr, ir)."""
+
+    # Coils: 100 bits, default False
+    co_block = ModbusSequentialDataBlock(0, [0] * 100)
+
+    # Discrete Inputs: 100 bits, default False
+    di_block = ModbusSequentialDataBlock(0, [0] * 100)
+
+    # Holding registers: 100 registers, default 0
+    hr_block = ModbusSequentialDataBlock(0, [0] * 100)
+
+    # Input registers: 100 registers, default 0
+    ir_block = ModbusSequentialDataBlock(0, [0] * 100)
+
+    device_context = ModbusDeviceContext(
+        di=di_block,
+        co=co_block,
+        hr=hr_block,
+        ir=ir_block,
     )
-    context = ModbusServerContext(slaves=store, single=True)
 
-    print(f"[OK] Starting Modbus TCP server at {ip}:502 ...")
-    server = ModbusTcpServer(
-        context,
+    return device_context
+
+
+# -----------------------------------------------------
+# Build ModbusServerContext (single-device, unit-id=1)
+# -----------------------------------------------------
+def build_context():
+    return ModbusServerContext(
+        devices={1: build_device()},  # only device 1
+        single=False,  # must be False when using dict
+    )
+
+
+# -----------------------------------------------------
+# Start a single async server on one IP
+# -----------------------------------------------------
+async def start_single_server(ip):
+    context = build_context()
+
+    identity = ModbusDeviceIdentification(
+        info_name={
+            "VendorName": "MultiModbusSim",
+            "ProductCode": "SIM",
+            "ProductName": "Multi-IP Modbus TCP Simulator",
+            "ModelName": "AsyncModbusServer",
+            "MajorMinorRevision": "1.0",
+        }
+    )
+
+    log.info(f"[START] Modbus TCP server @ {ip}:502")
+
+    await StartAsyncTcpServer(
+        context=context,
+        identity=identity,
         address=(ip, 502),
-        ipv6=False    # IMPORTANT FIX FOR WINDOWS
     )
-    server.serve_forever()
+
+
+# -----------------------------------------------------
+# Launch all servers concurrently
+# -----------------------------------------------------
+async def main():
+    ips = [f"172.16.1.{i}" for i in range(201, 211)]
+
+    log.info("Launching all Modbus servers...")
+
+    tasks = []
+    for ip in ips:
+        tasks.append(asyncio.create_task(start_single_server(ip)))
+
+    log.info("All servers started. Running forever...")
+
+    # Run servers forever
+    await asyncio.gather(*tasks)
 
 
 if __name__ == "__main__":
-    ips = [f"172.16.1.{i}" for i in range(201, 210)]
-
-    print("Launching Modbus servers, please wait...")
-
-    for ip in ips:
-        Thread(target=start_server, args=(ip,), daemon=True).start()
-
-    print("All servers running. Press Enter to stop.")
-    input()
+    asyncio.run(main())

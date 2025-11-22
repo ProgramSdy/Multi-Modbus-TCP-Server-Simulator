@@ -1,0 +1,33 @@
+# Ignore Python virtual environments
+venv/
+venv*/   
+*/venv/
+*/venv*/
+.venv/
+.venv*/
+
+# Ignore your venv312 specifically
+venv312/
+venv312/*
+
+# Ignore Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore temporary files
+*.log
+*.tmp
+
+# Ignore editor settings
+.vscode/
+.idea/
+
+# Ignore compiled files
+*.so
+*.dll
+
+# Ignore OS crap
+Thumbs.db
+.DS_Store
