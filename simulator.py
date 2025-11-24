@@ -55,9 +55,9 @@ def build_context():
 # -----------------------------------------------------
 # Start a single async server on one IP
 # -----------------------------------------------------
-async def start_single_server(ip):
+async def start_single_server(ip, server_index):
     context = build_context()
-    asyncio.create_task(register_updater(context))
+    asyncio.create_task(register_updater(context, ip, server_index))
 
     identity = ModbusDeviceIdentification(
         info_name={
@@ -69,7 +69,7 @@ async def start_single_server(ip):
         }
     )
 
-    log.info(f"[START] Modbus TCP server @ {ip}:502")
+    log.info(f"[START] Modbus TCP server {server_index} @ {ip}:502")
 
     await StartAsyncTcpServer(
         context=context,
@@ -80,7 +80,7 @@ async def start_single_server(ip):
 # -----------------------------------------------------
 # Updater register value
 # -----------------------------------------------------
-async def register_updater(context):
+async def register_updater(context, ip, server_index):
     func_code = 3          # holding registers
     address = 0            # HR[0]
     count = 1              # just one register
@@ -100,11 +100,10 @@ async def register_updater(context):
             # write new value
             context[unit_id].setValues(func_code, address, [new_value])
 
-            print(f"[Unit {unit_id}] HR[0] = {new_value}")
-            #print(f"[Server {server_index}] [Address: {ip}] [Unit ID: {unit_id}] [HR[0]: {new_value}]")
+            print(f"[Server {server_index}] [Address: {ip}] [Unit {unit_id}] HR[0] = {new_value}")
 
         except Exception as e:
-            print(f"[Unit {unit_id}] ERROR: {e}")
+            print(f"[Server {server_index}] [Address: {ip}] [Unit {unit_id}] ERROR: {e}")
 
 
 # -----------------------------------------------------
@@ -116,8 +115,8 @@ async def main():
     log.info("Launching all Modbus servers...")
 
     tasks = []
-    for ip in ips:
-        tasks.append(asyncio.create_task(start_single_server(ip)))
+    for idx, ip in enumerate(ips, start=1):
+        tasks.append(asyncio.create_task(start_single_server(ip, idx)))
 
     log.info("All servers started. Running forever...")
 
