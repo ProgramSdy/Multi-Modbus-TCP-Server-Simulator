@@ -110,7 +110,15 @@ async def register_updater(context, ip, server_index):
 # Launch all servers concurrently
 # -----------------------------------------------------
 async def main():
-    ips = [f"172.16.1.{i}" for i in range(201, 211)]
+    # Try to load Pi-specific config
+    try:
+        from local_config import PI_IP_LIST
+        ips = PI_IP_LIST
+        print("Using Pi local IP configuration.")
+    except ImportError:
+        # Default for laptop
+        ips = [f"172.16.1.{i}" for i in range(201, 211)]
+        print("Using default laptop IP configuration.")
 
     log.info("Launching all Modbus servers...")
 

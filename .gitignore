@@ -31,3 +31,6 @@ __pycache__/
 # Ignore OS crap
 Thumbs.db
 .DS_Store
+
+# Ignore local configuration files
+local_config.py
