@@ -13,6 +13,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("multi-modbus")
 
+# Define Server Host ID
+SERVER_HOST_ID_Start = 201
+SERVER_HOST_ID_Finish = 221
+SERVER_HOST_Qty = SERVER_HOST_ID_Finish - SERVER_HOST_ID_Start
 
 # -----------------------------------------------------
 # Build a device context (4 blocks, each size=100)
@@ -117,10 +121,10 @@ async def main():
         print("Using Pi local IP configuration.")
     except ImportError:
         # Default for laptop
-        ips = [f"172.16.1.{i}" for i in range(201, 211)]
+        ips = [f"172.16.1.{i}" for i in range(SERVER_HOST_ID_Start, SERVER_HOST_ID_Finish)]
         print("Using default laptop IP configuration.")
 
-    log.info("Launching all Modbus servers...")
+    log.info(f"Launching all {SERVER_HOST_Qty} Modbus servers...")
 
     tasks = []
     for idx, ip in enumerate(ips, start=1):
