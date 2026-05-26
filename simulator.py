@@ -13,16 +13,40 @@ import logging
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("multi-modbus")
 
-# Define Server Host ID
-SERVER_HOST_ID_Start = 201
-SERVER_HOST_ID_Finish = 221
-SERVER_HOST_Qty = SERVER_HOST_ID_Finish - SERVER_HOST_ID_Start
 # -----------------------------------------------------
-# Global configuration
+# Configuration
 # -----------------------------------------------------
-PORT = 502
-DEVICE_ID = 5
-HR_ADDRESS = 9
+try:
+    from local_config import (
+        PI_IP_LIST,
+        PORT,
+        DEVICE_ID,
+        HR_ADDRESS,
+    )
+
+    ips = PI_IP_LIST
+
+    print("Using Pi local configuration.")
+
+except ImportError:
+
+    # Default laptop configuration
+    SERVER_HOST_ID_Start = 201
+    SERVER_HOST_ID_Finish = 221
+
+    ips = [
+        f"172.16.1.{i}"
+        for i in range(SERVER_HOST_ID_Start, SERVER_HOST_ID_Finish)
+    ]
+
+    PORT = 502
+    DEVICE_ID = 2
+    HR_ADDRESS = 20
+
+    print("Using default laptop configuration.")
+
+
+SERVER_HOST_Qty = len(ips)
 
 # -----------------------------------------------------
 # Build a device context (4 blocks, each size=100)
@@ -120,15 +144,6 @@ async def register_updater(context, ip, server_index):
 # Launch all servers concurrently
 # -----------------------------------------------------
 async def main():
-    # Try to load Pi-specific config
-    try:
-        from local_config import PI_IP_LIST
-        ips = PI_IP_LIST
-        print("Using Pi local IP configuration.")
-    except ImportError:
-        # Default for laptop
-        ips = [f"172.16.1.{i}" for i in range(SERVER_HOST_ID_Start, SERVER_HOST_ID_Finish)]
-        print("Using default laptop IP configuration.")
 
     log.info(f"Launching all {SERVER_HOST_Qty} Modbus servers...")
 
