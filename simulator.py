@@ -17,6 +17,12 @@ log = logging.getLogger("multi-modbus")
 SERVER_HOST_ID_Start = 201
 SERVER_HOST_ID_Finish = 221
 SERVER_HOST_Qty = SERVER_HOST_ID_Finish - SERVER_HOST_ID_Start
+# -----------------------------------------------------
+# Global configuration
+# -----------------------------------------------------
+PORT = 502
+DEVICE_ID = 5
+HR_ADDRESS = 9
 
 # -----------------------------------------------------
 # Build a device context (4 blocks, each size=100)
@@ -51,7 +57,7 @@ def build_device():
 # -----------------------------------------------------
 def build_context():
     return ModbusServerContext(
-        devices={1: build_device()},  # only device 1
+        devices={DEVICE_ID: build_device()},
         single=False,  # must be False when using dict
     )
 
@@ -73,12 +79,12 @@ async def start_single_server(ip, server_index):
         }
     )
 
-    log.info(f"[START] Modbus TCP server {server_index} @ {ip}:502")
+    log.info(f"[START] Modbus TCP server {server_index} @ {ip}:{PORT}")
 
     await StartAsyncTcpServer(
         context=context,
         identity=identity,
-        address=(ip, 502),
+        address=(ip, PORT),
     )
 
 # -----------------------------------------------------
@@ -86,12 +92,12 @@ async def start_single_server(ip, server_index):
 # -----------------------------------------------------
 async def register_updater(context, ip, server_index):
     func_code = 3          # holding registers
-    address = 0            # HR[0]
+    address = HR_ADDRESS   # HR[HR_ADDRESS]
     count = 1              # just one register
 
     while True:
         await asyncio.sleep(1)
-        unit_id = 1
+        unit_id = DEVICE_ID
         
         try:
             # read current value
@@ -104,7 +110,7 @@ async def register_updater(context, ip, server_index):
             # write new value
             context[unit_id].setValues(func_code, address, [new_value])
 
-            print(f"[Server {server_index}] [Address: {ip}] [Unit {unit_id}] HR[0] = {new_value}")
+            print(f"[Server {server_index}] [Address: {ip}] [Unit {unit_id}] HR[{address}] = {new_value}")
 
         except Exception as e:
             print(f"[Server {server_index}] [Address: {ip}] [Unit {unit_id}] ERROR: {e}")
